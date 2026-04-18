@@ -5,36 +5,81 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # --- KONFIGURASI HALAMAN ---
-st.set_page_config(page_title="SIKAP: Sistem Informasi Klasifikasi Arsip Pintar", page_icon="🗂️", layout="centered")
+st.set_page_config(page_title="Klasifikasi Arsip Pintar", page_icon="🗂️", layout="centered")
 
-# --- 1. LOGIKA RULE-BASED (Kata Kunci Pasti) ---
+# --- 1. MEMUAT DATABASE (Standar Emas) ---
+@st.cache_data
+def load_data():
+    # Membaca file dengan aman
+    try:
+        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=',', on_bad_lines='skip', dtype={'kode': str})
+    except:
+        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=';', on_bad_lines='skip', dtype={'kode': str})
+    
+    df.columns = df.columns.str.strip().str.lower().str.replace('"', '').str.replace("'", "")
+    
+    if 'uraian' not in df.columns and len(df.columns) == 1:
+        col_name = df.columns[0]
+        df[['kode', 'uraian']] = df[col_name].str.split(r'[,;]', n=1, expand=True)
+        df = df.drop(columns=[col_name])
+    
+    # Pastikan bersih dan berformat string
+    df['uraian'] = df['uraian'].fillna("").astype(str)
+    df['kode'] = df['kode'].fillna("000").astype(str).str.strip()
+    
+    return df
+
+# --- 2. FITUR HIERARKI KODE ---
+def get_hierarchy(kode_target, df):
+    parts = str(kode_target).split('.')
+    hierarchy_list = []
+    current_code = ""
+    tingkatan = ["Primer", "Sekunder", "Tersier", "Kuartier", "Kuintier", "Sektier"]
+
+    for i, part in enumerate(parts):
+        # Merangkai kode dari level teratas ke bawah
+        if i == 0:
+            current_code = part
+        else:
+            current_code += "." + part
+        
+        # Mencari uraiannya di database
+        match = df[df['kode'] == current_code]
+        if not match.empty:
+            uraian = match.iloc[0]['uraian'].title()
+        else:
+            uraian = "Menyesuaikan Induk"
+            
+        label = tingkatan[i] if i < len(tingkatan) else f"Level {i+1}"
+        hierarchy_list.append(f"└─ **{current_code}**: {uraian} *({label})*")
+        
+    return hierarchy_list
+
+# --- 3. LOGIKA RULE-BASED (Akurasi Pasti) ---
 def manual_rule(text):
     text = text.lower()
-    # Anda bisa menambah aturan kata kunci di sini
     if re.search(r'(pangkat|mutasi|nip|pns|asn|cpns|pegawai|cuti)', text):
-        return "800", "Kepegawaian"
+        return "800.1" # Diarahkan ke rumpun Kepegawaian yg lebih spesifik
     if re.search(r'(sppd|perjalanan dinas|tugas luar)', text):
-        return "090", "Perjalanan Dinas"
+        return "090"
     if re.search(r'(undangan|rapat|pertemuan)', text):
-        return "005", "Undangan"
-    return None, None
+        return "005"
+    return None
 
-# --- 2. LOGIKA NLP/ML (Pencarian Kemiripan Makna) ---
+# --- 4. LOGIKA NLP/ML (Akurasi Tinggi dengan N-Gram) ---
 def nlp_classification(text, df, top_n=3):
-    vectorizer = TfidfVectorizer()
-    # Menggabungkan semua 'uraian' di database dengan input user di posisi terakhir
-    semua_teks = df['uraian'].fillna("").tolist() + [text]
-    tfidf_matrix = vectorizer.fit_transform(semua_teks)
+    # Menggunakan N-Gram (1,2) agar AI paham frasa kata
+    vectorizer = TfidfVectorizer(ngram_range=(1, 2))
+    semua_teks = df['uraian'].tolist() + [text]
     
-    # Menghitung kemiripan (Cosine Similarity)
+    tfidf_matrix = vectorizer.fit_transform(semua_teks)
     kemiripan = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1])[0]
     
-    # Mengambil indeks dengan skor tertinggi
     indeks_teratas = kemiripan.argsort()[-top_n:][::-1]
     
     hasil = []
     for idx in indeks_teratas:
-        if kemiripan[idx] > 0: # Pastikan ada kemiripan walau sedikit
+        if kemiripan[idx] > 0.05: # Batas minimal kemiripan agar tidak asal tebak
             hasil.append({
                 'kode': df.iloc[idx]['kode'],
                 'uraian': df.iloc[idx]['uraian'],
@@ -42,70 +87,46 @@ def nlp_classification(text, df, top_n=3):
             })
     return hasil
 
-# --- 3. MEMUAT DATABASE (Standar Emas) ---
-@st.cache_data
-def load_data():
-    try:
-        # Langsung tembak menggunakan pemisah koma (,). 
-        # on_bad_lines='skip' akan membuang baris yang rusak agar aplikasi tidak error
-        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=',', on_bad_lines='skip')
-    except:
-        # Jika masih gagal, coba dengan titik koma
-        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=';', on_bad_lines='skip')
-    
-    # Bersihkan judul kolom (berjaga-jaga jika ada spasi gaib)
-    df.columns = df.columns.str.strip().str.lower().str.replace('"', '').str.replace("'", "")
-    
-    # Jika datanya masih keras kepala menyatu di satu kolom
-    if 'uraian' not in df.columns and len(df.columns) == 1:
-        col_name = df.columns[0]
-        df[['kode', 'uraian']] = df[col_name].str.split(r'[,;]', n=1, expand=True)
-        df = df.drop(columns=[col_name])
-    
-    # Pastikan tidak ada data yang kosong (NaN) agar AI tidak bingung
-    if 'uraian' in df.columns:
-        df['uraian'] = df['uraian'].fillna("")
-    if 'kode' in df.columns:
-        df['kode'] = df['kode'].fillna("000")
-        
-    return df
-
-# --- 4. ANTARMUKA (UI) STREAMLIT ---
-st.title("🗂️ SIKAP")
-st.markdown("**Sistem Informasi Klasifikasi Arsip Pintar**")
+# --- 5. ANTARMUKA (UI) STREAMLIT ---
+st.title("🗂️ SIKAP - Sistem Klasifikasi Arsip Pintar")
+st.markdown("**Berdasarkan Permendagri No. 83 Tahun 2022**")
 
 try:
-    # Load database
     df = load_data()
     
-    # Kolom input untuk user
     user_input = st.text_input(
         "Ketik Perihal / Isi Ringkas Surat:", 
-        placeholder="Contoh: Undangan Rapat Evaluasi TAPD..."
+        placeholder="Contoh: Undangan Rapat Evaluasi Anggaran..."
     )
 
     if user_input:
         st.write("---")
-        st.subheader("Hasil Analisis Sistem:")
+        st.subheader("💡 Hasil Analisis Klasifikasi:")
         
-        # 1. Cek dengan Rule-Based terlebih dahulu
-        kode_rule, uraian_rule = manual_rule(user_input)
-        
+        # Cek Rule-Based
+        kode_rule = manual_rule(user_input)
         if kode_rule:
-            st.success("Tangkapan Kata Kunci (Rule-Based) Ditemukan!")
-            st.info(f"Rekomendasi Cepat: **{kode_rule}** - {uraian_rule}")
-            st.write("*Berikut adalah opsi klasifikasi lebih spesifik dari AI:*")
+            st.success("📌 Ditemukan Kecocokan Pola Khusus (Rule-Based)")
+            st.write("Jalur Hierarki:")
+            hierarki_rule = get_hierarchy(kode_rule, df)
+            for h in hierarki_rule:
+                st.markdown(h)
+            st.write("---")
+            st.write("*Opsi Klasifikasi Spesifik dari AI:*")
             
-        # 2. Jalankan NLP untuk mencari sub-kode yang paling pas
+        # Cek NLP
         hasil_nlp = nlp_classification(user_input, df)
         
         if hasil_nlp:
             for i, res in enumerate(hasil_nlp):
-                # Menampilkan hasil (Buka otomatis untuk ranking 1)
-                with st.expander(f"Rekomendasi #{i+1}: Kode {res['kode']} (Akurasi: {res['skor']:.1%})", expanded=(i==0)):
-                    st.write(f"**Uraian:** {res['uraian']}")
+                with st.expander(f"🏆 Rekomendasi #{i+1}: Kode {res['kode']} (Kemiripan: {res['skor']:.1%})", expanded=(i==0)):
+                    st.write("**Jalur Hierarki Kode Ini:**")
+                    # Memanggil fitur hierarki untuk hasil AI
+                    hierarki_ai = get_hierarchy(res['kode'], df)
+                    for h in hierarki_ai:
+                        st.markdown(h)
         else:
-            st.warning("Sistem tidak menemukan klasifikasi yang mirip di database. Coba gunakan kata kunci yang lebih baku.")
+            st.warning("⚠️ Sistem tidak menemukan klasifikasi yang mirip. Coba gunakan kata kunci dinas yang lebih baku.")
 
-except FileNotFoundError:
-    st.error("❌ File 'klasifikasi_arsip_emas.csv' tidak ditemukan. Pastikan Anda sudah mengunggahnya ke repository GitHub Anda.")
+except Exception as e:
+    st.error(f"Terjadi kesalahan sistem. Pastikan file CSV sudah benar. Log: {e}")
