@@ -85,7 +85,6 @@ kamus_frasa = {
     "tenaga kerja": "ketenagakerjaan",
     "hari libur": "hari libur nasional"
 }
-}
 
 # --- 2. KAMUS JARGON BIROKRASI (VERSI FULL PERMENDAGRI 83/2022) ---
 kamus_birokrasi = {
