@@ -5,7 +5,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # --- KONFIGURASI HALAMAN ---
-st.set_page_config(page_title="Klasifikasi Arsip Pintar", page_icon="🗂️", layout="centered")
+st.set_page_config(page_title="SIKAP: Sistem Informasi Klasifikasi Arsip Pintar", page_icon="🗂️", layout="centered")
 
 # --- 1. LOGIKA RULE-BASED (Kata Kunci Pasti) ---
 def manual_rule(text):
