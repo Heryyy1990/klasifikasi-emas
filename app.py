@@ -71,8 +71,8 @@ def load_data():
     return df
 
 # --- 4. ANTARMUKA (UI) STREAMLIT ---
-st.title("🗂️ Asisten Klasifikasi Arsip Pintar")
-st.markdown("**Berdasarkan Permendagri No. 83 Tahun 2022**")
+st.title("🗂️ SIKAP: Sistem Informasi Klasifikasi Arsip Pintar")
+st.markdown("****")
 
 try:
     # Load database
