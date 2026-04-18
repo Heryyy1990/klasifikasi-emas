@@ -19,6 +19,152 @@ def init_nlp():
 
 stemmer, remover = init_nlp()
 
+# --- KAMUS JARGON & SINGKATAN BIROKRASI (VERSI FULL PERMENDAGRI 83/2022) ---
+kamus_birokrasi = {
+    # ==========================================
+    # 1. KEUANGAN & ANGGARAN (KODE 900)
+    # ==========================================
+    "apbd": "anggaran pendapatan dan belanja daerah",
+    "apbn": "anggaran pendapatan dan belanja negara",
+    "tapd": "tim anggaran pemerintah daerah",
+    "dpa": "dokumen pelaksanaan anggaran",
+    "rka": "rencana kerja anggaran",
+    "skpd": "satuan kerja perangkat daerah",
+    "ppkd": "pejabat pengelola keuangan daerah",
+    "ppa": "prioritas plafon anggaran",
+    "spp": "surat permintaan pembayaran",
+    "spm": "surat perintah membayar",
+    "sp2d": "surat perintah pencairan dana",
+    "up": "uang persediaan",
+    "gu": "ganti uang",
+    "tu": "tambah uang",
+    "ls": "langsung",
+    "bud": "bendahara umum daerah",
+    "bku": "buku kas umum",
+    "sakd": "sistem akuntansi keuangan daerah",
+    "phln": "pinjaman hibah luar negeri",
+    "bumd": "badan usaha milik daerah",
+    "blud": "badan layanan umum daerah",
+    "dau": "dana alokasi umum",
+    "dak": "dana alokasi khusus",
+    "dbh": "dana bagi hasil",
+
+    # ==========================================
+    # 2. KEPEGAWAIAN (KODE 800)
+    # ==========================================
+    "asn": "aparatur sipil negara",
+    "pns": "pegawai negeri sipil",
+    "cpns": "calon pegawai negeri sipil",
+    "pppk": "pegawai pemerintah dengan perjanjian kerja",
+    "p3k": "pegawai pemerintah dengan perjanjian kerja",
+    "nip": "nomor induk pegawai",
+    "bkn": "badan kepegawaian negara",
+    "skp": "standar kinerja pegawai", # atau sasaran kinerja pegawai
+    "duk": "daftar urut kepangkatan",
+    "karpeg": "kartu pegawai",
+    "kpe": "kartu pegawai elektronik",
+    "karis": "kartu istri",
+    "karsu": "kartu suami",
+    "lp2p": "laporan pajak penghasilan pribadi",
+    "kp4": "keterangan penerimaan pembayaran penghasilan pegawai",
+    "baperjakat": "badan pertimbangan jabatan dan pangkat",
+    "bpjs": "badan penyelenggara jaminan sosial",
+    "diklat": "pendidikan dan pelatihan",
+    "bimtek": "bimbingan teknis",
+
+    # ==========================================
+    # 3. PENGAWASAN & HUKUM (KODE 700 & 100)
+    # ==========================================
+    "lhp": "laporan hasil pemeriksaan",
+    "lha": "laporan hasil audit",
+    "lhpo": "laporan hasil pemeriksaan operasional",
+    "lhe": "laporan hasil evaluasi",
+    "lhai": "laporan hasil audit investigasi",
+    "tpk": "tindak pidana korupsi",
+    "gcg": "good corporate governance",
+    "perda": "peraturan daerah",
+    "perbup": "peraturan bupati",
+    "perwali": "peraturan wali kota",
+    "mou": "memorandum of understanding nota kesepakatan",
+    "sop": "standar operasional prosedur",
+    "haki": "hak atas kekayaan intelektual",
+
+    # ==========================================
+    # 4. PEMERINTAHAN, POLITIK & UMUM (KODE 000, 100, 200)
+    # ==========================================
+    "dprd": "dewan perwakilan rakyat daerah",
+    "musrenbang": "musyawarah perencanaan pembangunan",
+    "lkpj": "laporan keterangan pertanggungjawaban",
+    "lppd": "laporan penyelenggaraan pemerintahan daerah",
+    "bmd": "barang milik daerah",
+    "kak": "kerangka acuan kerja",
+    "sppd": "surat perintah perjalanan dinas",
+    "spt": "surat perintah tugas",
+    "nodin": "nota dinas",
+    "bap": "berita acara pemeriksaan",
+    "bast": "berita acara serah terima",
+    "kpu": "komisi pemilihan umum",
+    "kpud": "komisi pemilihan umum daerah",
+    "dp4": "daftar penduduk potensial pemilih",
+    "dps": "daftar pemilih sementara",
+    "dpt": "daftar pemilih tetap",
+    "panwasda": "panitia pengawas daerah",
+    "ppk": "panitia pemilihan kecamatan",
+    "pps": "panitia pemungutan suara",
+    "kpps": "kelompok penyelenggara pemungutan suara",
+    "ormas": "organisasi kemasyarakatan",
+    "lsm": "lembaga swadaya masyarakat",
+    "parpol": "partai politik",
+
+    # ==========================================
+    # 5. KEARSIPAN & TEKNIS LAINNYA (KODE 000.5, 400, 500, 600)
+    # ==========================================
+    "anri": "arsip nasional republik indonesia",
+    "jra": "jadwal retensi arsip",
+    "sikn": "sistem informasi kearsipan nasional",
+    "jikn": "jaringan informasi kearsipan nasional",
+    "spam": "sistem penyediaan air minum",
+    "psat": "pangan segar asal tumbuhan",
+    "bumdes": "badan usaha milik desa",
+    "bos": "bantuan operasional sekolah",
+    "paud": "pendidikan anak usia dini",
+    "rtrw": "rencana tata ruang wilayah",
+    "rdtr": "rencana detail tata ruang",
+    "rtbl": "rencana tata bangunan dan lingkungan",
+    "amdal": "analisis mengenai dampak lingkungan",
+    "ukl": "upaya pengelolaan lingkungan",
+    "upl": "upaya pemantauan lingkungan",
+    "b3": "bahan berbahaya dan beracun",
+    "sar": "search and rescue pencarian dan pertolongan"
+}
+
+# --- FUNGSI PENERJEMAH SINGKATAN ---
+def terjemahkan_singkatan(text):
+    # Memecah kalimat menjadi kata-kata tunggal
+    kata_kata = str(text).lower().split()
+    # Mengecek satu per satu, apakah kata tersebut ada di kamus?
+    kata_terjemahan = [kamus_birokrasi.get(kata, kata) for kata in kata_kata]
+    # Menggabungkannya kembali menjadi kalimat utuh
+    return " ".join(kata_terjemahan)
+
+# --- FUNGSI PEMBERSIH UTAMA ---
+def preprocess_text(text):
+    text = str(text).lower()
+    
+    # 1. Terjemahkan singkatan terlebih dahulu! (Ini kuncinya)
+    text = terjemahkan_singkatan(text)
+    
+    # 2. Kecilkan huruf & hapus karakter aneh/simbol
+    text = re.sub(r'[^a-z0-9\s]', ' ', text)
+    
+    # 3. Hapus Stopwords (kata sambung seperti "di", "dan", "yang")
+    text = remover.remove(text)
+    
+    # 4. Stemming (Potong imbuhan menggunakan Sastrawi)
+    text = stemmer.stem(text)
+    
+    return text
+
 def preprocess_text(text):
     # 1. Kecilkan huruf & hapus karakter aneh
     text = str(text).lower()
