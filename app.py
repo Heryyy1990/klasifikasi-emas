@@ -29,7 +29,65 @@ def init_nlp():
 
 stemmer, remover = init_nlp()
 
-# --- KAMUS JARGON BIROKRASI (VERSI FULL PERMENDAGRI 83/2022) ---
+# --- 1. KAMUS FRASA (PENCEGAH SALAH ARAH KELAS BERAT) ---
+kamus_frasa = {
+    # Kepegawaian (800)
+    "kenaikan gaji berkala": "penggajian pegawai",
+    "gaji berkala": "penggajian pegawai",
+    "analisis jabatan": "anjab kepegawaian",
+    "analisis beban kerja": "abk kepegawaian",
+    "daftar urut kepangkatan": "duk pegawai",
+    "ijin belajar": "pendidikan lanjutan pegawai",
+    "izin belajar": "pendidikan lanjutan pegawai",
+    "tugas belajar": "pendidikan lanjutan pegawai",
+    "cuti tahunan": "cuti pegawai",
+    "cuti melahirkan": "cuti pegawai",
+    "cuti sakit": "cuti pegawai",
+    "cuti besar": "cuti pegawai",
+    "pakaian dinas": "seragam perlengkapan pegawai",
+    "pelantikan pejabat": "jabatan struktural",
+    "mutasi masuk": "pindah tugas pegawai",
+    "mutasi keluar": "pindah tugas pegawai",
+    
+    # Keuangan & Perencanaan (900 & 000)
+    "rencana kerja anggaran": "rka keuangan",
+    "dokumen pelaksanaan anggaran": "dpa keuangan",
+    "surat permintaan pembayaran": "spp pencairan",
+    "surat perintah membayar": "spm pencairan",
+    "surat perintah pencairan dana": "sp2d pencairan",
+    "uang persediaan": "up bendahara",
+    "ganti uang": "gu bendahara",
+    "tambah uang": "tu bendahara",
+    "tuntutan ganti rugi": "tgr keuangan",
+    "pajak daerah": "pendapatan retribusi",
+    
+    # Umum, Perlengkapan & Perjalanan (000 & 010)
+    "perjalanan dinas": "sppd kunjungan kerja",
+    "alat tulis kantor": "atk perlengkapan kantor",
+    "kendaraan dinas": "mobil dinas kendaraan",
+    "aset daerah": "barang milik daerah",
+    "serah terima": "penyerahan bast",
+    "rapat koordinasi": "rakor rapat",
+    "rapat pimpinan": "rapim pimpinan",
+    "standar operasional prosedur": "sop ketatalaksanaan",
+    
+    # Hukum, Pengawasan & Pemerintahan Daerah (100 & 700)
+    "tindak pidana korupsi": "tipikor pidana",
+    "hak asasi manusia": "ham hukum",
+    "bantuan hukum": "advokasi hukum",
+    "rapat paripurna": "paripurna dprd",
+    "tanda daftar": "perizinan pendaftaran",
+    "izin mendirikan bangunan": "imb perizinan",
+    
+    # Kesejahteraan, Sosial & Pembangunan
+    "bantuan sosial": "hibah bansos",
+    "air minum": "spam perumahan",
+    "tenaga kerja": "ketenagakerjaan",
+    "hari libur": "hari libur nasional"
+}
+}
+
+# --- 2. KAMUS JARGON BIROKRASI (VERSI FULL PERMENDAGRI 83/2022) ---
 kamus_birokrasi = {
     "apbd": "anggaran pendapatan dan belanja daerah",
     "apbn": "anggaran pendapatan dan belanja negara",
@@ -129,20 +187,23 @@ kamus_birokrasi = {
     "sar": "search and rescue pencarian dan pertolongan"
 }
 
-def terjemahkan_singkatan(text):
-    kata_kata = str(text).lower().split()
-    kata_terjemahan = [kamus_birokrasi.get(kata, kata) for kata in kata_kata]
-    return " ".join(kata_terjemahan)
+def terjemahkan_teks(text):
+    text = str(text).lower()
+    for frasa, pengganti in kamus_frasa.items():
+        if frasa in text:
+            text = text.replace(frasa, pengganti)
+    kata_kata = text.split()
+    text = " ".join([kamus_birokrasi.get(k, k) for k in kata_kata])
+    return text
 
 def preprocess_text(text):
-    text = str(text).lower()
-    text = terjemahkan_singkatan(text)
+    text = terjemahkan_teks(text)
     text = re.sub(r'[^a-z0-9\s]', ' ', text)
     text = remover.remove(text)
     text = stemmer.stem(text)
     return text
 
-# --- MANAJEMEN DATA (JURUS ANTI-BADAI CSV) ---
+# --- MANAJEMEN DATA ---
 @st.cache_data
 def load_data():
     try:
@@ -156,143 +217,85 @@ def load_data():
         df = df.drop(columns=[col_name])
         
     if len(df.columns) >= 2:
-        kolom_baru = list(df.columns)
-        kolom_baru[0] = 'kode'
-        kolom_baru[1] = 'uraian'
-        df.columns = kolom_baru
+        df.columns = ['kode', 'uraian'] + list(df.columns[2:])
     
     df['uraian'] = df['uraian'].astype(str).str.replace(r';$', '', regex=True).str.strip().fillna("")
     df['kode'] = df['kode'].astype(str).str.strip().fillna("000")
     df['clean_uraian'] = df['uraian'].apply(preprocess_text)
-    
     return df
 
 def save_feedback(input_text, final_code):
     file_path = 'log_penggunaan.csv'
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     new_data = pd.DataFrame([[now, input_text, final_code]], columns=['Waktu', 'Input', 'Kode_Dipilih'])
-    
     if not os.path.isfile(file_path):
         new_data.to_csv(file_path, index=False)
     else:
         new_data.to_csv(file_path, mode='a', header=False, index=False)
 
-# --- FITUR POHON HIERARKI (YANG TERTINGGAL TADI) ---
+# --- FITUR POHON HIERARKI ---
 def get_hierarchy(kode_target, df):
     parts = str(kode_target).split('.')
     hierarchy_list = []
     current_code = ""
     levels = ["Primer", "Sekunder", "Tersier", "Kuartier", "Kuintier"]
-
     for i, part in enumerate(parts):
         current_code = (current_code + "." + part) if current_code else part
         match = df[df['kode'] == current_code]
-        uraian = match.iloc[0]['uraian'].title() if not match.empty else "Uraian Klasifikasi"
+        uraian = match.iloc[0]['uraian'].title() if not match.empty else "Detail Klasifikasi"
         label = levels[i] if i < len(levels) else f"Level {i+1}"
         hierarchy_list.append(f"└─ **{current_code}**: {uraian} *({label})*")
     return hierarchy_list
 
-# --- OTAK PENCARIAN (KEMBALI KE VERSI TERBAIK YANG ASLI) ---
+# --- LOGIKA PENCARIAN (BEBAS GEMBOK & SET RATIO) ---
 def smart_classify(user_input, df, top_n=3):
     clean_input = preprocess_text(user_input)
-    
-    # N-Gram 1-3 dipertahankan agar bisa membaca kalimat panjang
     vectorizer = TfidfVectorizer(ngram_range=(1, 3))
     all_docs = df['clean_uraian'].tolist() + [clean_input]
     tfidf_matrix = vectorizer.fit_transform(all_docs)
-    
     cosine_sim = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1])[0]
     
     final_scores = []
     for idx, score in enumerate(cosine_sim):
-        # KESALAHAN FATAL DIPERBAIKI: Kembali menggunakan token_set_ratio
         fuzzy_score = fuzz.token_set_ratio(clean_input, df.iloc[idx]['clean_uraian']) / 100
-        
-        # Bobot dikembalikan ke racikan asli (75% makna, 25% insting kata)
         combined_score = (score * 0.75) + (fuzzy_score * 0.25)
         final_scores.append((idx, combined_score))
         
-    hasil_akhir = sorted(final_scores, key=lambda x: x[1], reverse=True)
-    return hasil_akhir[:top_n]
-    
-    vectorizer = TfidfVectorizer(ngram_range=(1, 3))
-    all_docs = df['clean_uraian'].tolist() + [clean_input]
-    tfidf_matrix = vectorizer.fit_transform(all_docs)
-    
-    cosine_sim = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1])[0]
-    
-    final_scores = []
-    for idx, score in enumerate(cosine_sim):
-        fuzzy_score = fuzz.token_sort_ratio(clean_input, df.iloc[idx]['clean_uraian']) / 100
-        combined_score = (score * 0.85) + (fuzzy_score * 0.15)
-        final_scores.append((idx, combined_score))
-        
-    hasil_akhir = sorted(final_scores, key=lambda x: x[1], reverse=True)
-    return hasil_akhir[:top_n]
+    return sorted(final_scores, key=lambda x: x[1], reverse=True)[:top_n]
 
-
-# --- UI UTAMA / DASHBOARD ---
+# --- UI DASHBOARD ---
 st.sidebar.title("🏢 SIKAP Muna Barat")
-st.sidebar.markdown("Sistem Informasi Klasifikasi Arsip Pintar")
-menu = st.sidebar.radio("Navigasi Menu:", ["🔍 Pencarian Pintar", "📖 Kamus Kode", "📊 Laporan Strategis"])
+menu = st.sidebar.radio("Navigasi:", ["🔍 Pencarian Pintar", "📖 Kamus Kode", "📊 Laporan Strategis"])
 
 df = load_data()
 
 if menu == "🔍 Pencarian Pintar":
     st.title("🔍 Pencarian Klasifikasi")
-    user_input = st.text_input("Ketik Perihal Surat:", placeholder="Contoh: laporan hasil evaluasi dana alokasi khusus...")
-
+    user_input = st.text_input("Ketik Perihal Surat:", placeholder="Misal: Kenaikan gaji berkala...")
     if user_input:
-        with st.spinner("Menganalisis makna persuratan..."):
-            results = smart_classify(user_input, df)
-            
-            st.subheader("Rekomendasi Terbaik:")
-            for i, (idx, score) in enumerate(results):
-                res = df.iloc[idx]
-                with st.container():
-                    st.markdown(f'''
-                    <div class="result-card">
-                        <h4>🏆 #{i+1} | Kode: {res['kode']} (Skor: {score:.1%})</h4>
-                        <p><b>Uraian:</b> {res['uraian']}</p>
-                    </div>
-                    ''', unsafe_allow_html=True)
-                    
-                    # MEMANGGIL POHON HIERARKI DI SINI
-                    with st.expander("🌳 Lihat Pohon Hierarki (Asal Usul Kode)"):
-                        hierarki = get_hierarchy(res['kode'], df)
-                        for h in hierarki:
-                            st.markdown(h)
-                    
-                    if st.button(f"✅ Gunakan Kode {res['kode']}", key=f"btn_{idx}"):
-                        save_feedback(user_input, res['kode'])
-                        st.success(f"Berhasil! Kode {res['kode']} direkam untuk Laporan Pimpinan.")
+        results = smart_classify(user_input, df)
+        for i, (idx, score) in enumerate(results):
+            res = df.iloc[idx]
+            with st.container():
+                st.markdown(f'<div class="result-card"><h4>🏆 #{i+1} | Kode: {res["kode"]} ({score:.1%})</h4><p>{res["uraian"]}</p></div>', unsafe_allow_html=True)
+                with st.expander("🌳 Lihat Pohon Hierarki"):
+                    for h in get_hierarchy(res['kode'], df):
+                        st.markdown(h)
+                if st.button(f"✅ Pilih Kode {res['kode']}", key=f"btn_{idx}"):
+                    save_feedback(user_input, res['kode'])
+                    st.success("Data tersimpan untuk laporan.")
 
 elif menu == "📖 Kamus Kode":
-    st.title("📖 Penelusuran Kamus Kode")
-    search_code = st.text_input("Masukkan Kode (Misal: 800):")
-    
+    st.title("📖 Kamus Kode")
+    search_code = st.text_input("Masukkan Kode (Misal: 900):")
     if search_code:
-        filtered_df = df[df['kode'].str.startswith(search_code)]
-        if not filtered_df.empty:
-            st.write(f"Menampilkan **{len(filtered_df)}** uraian untuk rumpun kode **{search_code}**:")
-            st.table(filtered_df[['kode', 'uraian']])
-        else:
-            st.warning("Kode tidak ditemukan dalam database.")
+        f_df = df[df['kode'].str.startswith(search_code)]
+        st.table(f_df[['kode', 'uraian']])
 
 elif menu == "📊 Laporan Strategis":
-    st.title("📊 Laporan Tren Arsip")
+    st.title("📊 Laporan Tren")
     if os.path.isfile('log_penggunaan.csv'):
         log_df = pd.read_csv('log_penggunaan.csv')
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("Total Arsip Diklasifikasikan", len(log_df))
-        
-        st.subheader("Top 5 Klasifikasi Paling Sering Muncul")
-        top_codes = log_df['Kode_Dipilih'].value_counts().head(5)
-        st.bar_chart(top_codes)
-        
-        st.subheader("Riwayat Aktivitas Arsiparis")
+        st.metric("Total Arsip", len(log_df))
+        st.bar_chart(log_df['Kode_Dipilih'].value_counts().head(5))
         st.dataframe(log_df.tail(10))
-    else:
-        st.info("Belum ada data laporan. Konfirmasi pencarian kode di menu utama terlebih dahulu.")
