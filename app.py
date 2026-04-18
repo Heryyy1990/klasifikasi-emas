@@ -16,7 +16,7 @@ st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
-    .result-card { background-color: white; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); margin-bottom: 10px; }
+    .result-card { background-color: white; padding: 20px; border-radius: 10px; border-left: 5px solid #007bff; box-shadow: 2px 2px 10px rgba(0,0,0,0.1); margin-bottom: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -177,6 +177,21 @@ def save_feedback(input_text, final_code):
     else:
         new_data.to_csv(file_path, mode='a', header=False, index=False)
 
+# --- FITUR POHON HIERARKI (YANG TERTINGGAL TADI) ---
+def get_hierarchy(kode_target, df):
+    parts = str(kode_target).split('.')
+    hierarchy_list = []
+    current_code = ""
+    levels = ["Primer", "Sekunder", "Tersier", "Kuartier", "Kuintier"]
+
+    for i, part in enumerate(parts):
+        current_code = (current_code + "." + part) if current_code else part
+        match = df[df['kode'] == current_code]
+        uraian = match.iloc[0]['uraian'].title() if not match.empty else "Uraian Klasifikasi"
+        label = levels[i] if i < len(levels) else f"Level {i+1}"
+        hierarchy_list.append(f"└─ **{current_code}**: {uraian} *({label})*")
+    return hierarchy_list
+
 # --- OTAK PENCARIAN (VERSI PRESISI BEBAS GEMBOK 100% ASLI) ---
 def smart_classify(user_input, df, top_n=3):
     clean_input = preprocess_text(user_input)
@@ -222,6 +237,12 @@ if menu == "🔍 Pencarian Pintar":
                         <p><b>Uraian:</b> {res['uraian']}</p>
                     </div>
                     ''', unsafe_allow_html=True)
+                    
+                    # MEMANGGIL POHON HIERARKI DI SINI
+                    with st.expander("🌳 Lihat Pohon Hierarki (Asal Usul Kode)"):
+                        hierarki = get_hierarchy(res['kode'], df)
+                        for h in hierarki:
+                            st.markdown(h)
                     
                     if st.button(f"✅ Gunakan Kode {res['kode']}", key=f"btn_{idx}"):
                         save_feedback(user_input, res['kode'])
