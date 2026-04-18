@@ -192,9 +192,28 @@ def get_hierarchy(kode_target, df):
         hierarchy_list.append(f"└─ **{current_code}**: {uraian} *({label})*")
     return hierarchy_list
 
-# --- OTAK PENCARIAN (VERSI PRESISI BEBAS GEMBOK 100% ASLI) ---
+# --- OTAK PENCARIAN (KEMBALI KE VERSI TERBAIK YANG ASLI) ---
 def smart_classify(user_input, df, top_n=3):
     clean_input = preprocess_text(user_input)
+    
+    # N-Gram 1-3 dipertahankan agar bisa membaca kalimat panjang
+    vectorizer = TfidfVectorizer(ngram_range=(1, 3))
+    all_docs = df['clean_uraian'].tolist() + [clean_input]
+    tfidf_matrix = vectorizer.fit_transform(all_docs)
+    
+    cosine_sim = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1])[0]
+    
+    final_scores = []
+    for idx, score in enumerate(cosine_sim):
+        # KESALAHAN FATAL DIPERBAIKI: Kembali menggunakan token_set_ratio
+        fuzzy_score = fuzz.token_set_ratio(clean_input, df.iloc[idx]['clean_uraian']) / 100
+        
+        # Bobot dikembalikan ke racikan asli (75% makna, 25% insting kata)
+        combined_score = (score * 0.75) + (fuzzy_score * 0.25)
+        final_scores.append((idx, combined_score))
+        
+    hasil_akhir = sorted(final_scores, key=lambda x: x[1], reverse=True)
+    return hasil_akhir[:top_n]
     
     vectorizer = TfidfVectorizer(ngram_range=(1, 3))
     all_docs = df['clean_uraian'].tolist() + [clean_input]
