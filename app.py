@@ -42,25 +42,32 @@ def nlp_classification(text, df, top_n=3):
             })
     return hasil
 
-# --- 3. MEMUAT DATABASE (Standar Emas Anti-Badai) ---
+# --- 3. MEMUAT DATABASE (Standar Emas) ---
 @st.cache_data
 def load_data():
-    # 1. engine='python' dan sep=None menyuruh Pandas menebak otomatis pemisahnya (, atau ;)
-    df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=None, engine='python')
+    try:
+        # Langsung tembak menggunakan pemisah koma (,). 
+        # on_bad_lines='skip' akan membuang baris yang rusak agar aplikasi tidak error
+        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=',', on_bad_lines='skip')
+    except:
+        # Jika masih gagal, coba dengan titik koma
+        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=';', on_bad_lines='skip')
     
-    # 2. Bersihkan judul kolom dari spasi nyasar, huruf besar, atau tanda kutip gaib
+    # Bersihkan judul kolom (berjaga-jaga jika ada spasi gaib)
     df.columns = df.columns.str.strip().str.lower().str.replace('"', '').str.replace("'", "")
     
-    # 3. Jika karena suatu alasan datanya masih menyatu jadi 1 kolom (misal namanya 'kode;uraian')
+    # Jika datanya masih keras kepala menyatu di satu kolom
     if 'uraian' not in df.columns and len(df.columns) == 1:
         col_name = df.columns[0]
-        # Paksa belah menjadi dua kolom berdasarkan koma atau titik koma pertama
         df[['kode', 'uraian']] = df[col_name].str.split(r'[,;]', n=1, expand=True)
         df = df.drop(columns=[col_name])
     
-    # 4. Pastikan data tidak ada yang NaN (Kosong)
-    df['uraian'] = df['uraian'].fillna("")
-    
+    # Pastikan tidak ada data yang kosong (NaN) agar AI tidak bingung
+    if 'uraian' in df.columns:
+        df['uraian'] = df['uraian'].fillna("")
+    if 'kode' in df.columns:
+        df['kode'] = df['kode'].fillna("000")
+        
     return df
 
 # --- 4. ANTARMUKA (UI) STREAMLIT ---
