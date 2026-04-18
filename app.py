@@ -222,7 +222,7 @@ def get_hierarchy(kode_target, df):
         hierarchy_list.append(f"└─ **{current_code}**: {uraian} *({label})*")
     return hierarchy_list
 
-# --- 3. LOGIKA NLP & FUZZY MATCHING ---
+# --- 3. LOGIKA NLP & FUZZY MATCHING (Versi "Magnet Rumpun") ---
 def smart_classify(user_input, df, top_n=3):
     # A. Preprocess input user
     clean_input = preprocess_text(user_input)
@@ -234,21 +234,44 @@ def smart_classify(user_input, df, top_n=3):
     
     cosine_sim = cosine_similarity(tfidf_matrix[-1], tfidf_matrix[:-1])[0]
     
-    # C. Gabungkan dengan Fuzzy Matching (Toleransi Typo)
-    final_scores = []
+    # C. Hitung Skor Murni Awal
+    skor_awal = []
     for idx, score in enumerate(cosine_sim):
-        # Fuzzy ratio antara input user dan uraian asli
-        fuzzy_score = fuzz.token_set_ratio(user_input, df.iloc[idx]['uraian']) / 100
-        # Gabungkan skor (Bobot: 70% AI, 30% Fuzzy)
-        combined_score = (score * 0.7) + (fuzzy_score * 0.3)
+        fuzzy_score = fuzz.token_set_ratio(clean_input, df.iloc[idx]['clean_uraian']) / 100
+        combined_score = (score * 0.70) + (fuzzy_score * 0.30)
+        skor_awal.append({'idx': idx, 'skor': combined_score})
         
-        if combined_score > 0.1:
-            final_scores.append((idx, combined_score))
+    # Urutkan untuk mengetahui siapa Juara 1 sesungguhnya
+    skor_awal = sorted(skor_awal, key=lambda x: x['skor'], reverse=True)
     
-    # Urutkan berdasarkan skor tertinggi
-    final_scores = sorted(final_scores, key=lambda x: x[1], reverse=True)[:top_n]
+    # D. FITUR MAGNET RUMPUN (Merapikan Juara 2 dan 3 agar tidak melenceng)
+    if skor_awal:
+        idx_juara_1 = skor_awal[0]['idx']
+        kode_juara_1 = str(df.iloc[idx_juara_1]['kode'])
+        
+        # Ambil rumpun utama dari Juara 1 (Contoh: "900.1.3.1" -> "900.1")
+        bagian_kode = kode_juara_1.split('.')
+        rumpun_utama = ".".join(bagian_kode[:2]) if len(bagian_kode) >= 2 else bagian_kode[0]
+        
+        hasil_akhir = []
+        for item in skor_awal:
+            idx = item['idx']
+            skor = item['skor']
+            kode_item = str(df.iloc[idx]['kode'])
+            
+            # Berikan bonus skor 50% jika item ini satu rumpun dengan Juara 1
+            if kode_item.startswith(rumpun_utama) and idx != idx_juara_1:
+                skor = skor * 1.5 
+                
+            hasil_akhir.append((idx, skor))
+            
+        # Urutkan kembali setelah bonus diberikan
+        hasil_akhir = sorted(hasil_akhir, key=lambda x: x[1], reverse=True)
+        
+        # Selalu tampilkan 3 teratas sesuai permintaan
+        return hasil_akhir[:top_n]
     
-    return final_scores
+    return []
 
 # --- 4. ANTARMUKA ---
 st.title("🗂️ SIKAP (Ultimate)")
