@@ -29,20 +29,36 @@ def preprocess_text(text):
     text = stemmer.stem(text)
     return text
 
-# --- 1. MEMUAT DATABASE ---
+# --- 1. MEMUAT DATABASE (Jurus Pamungkas) ---
 @st.cache_data
 def load_data():
+    # 1. Coba buka file dengan koma, jika gagal pakai titik koma
     try:
-        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=',', on_bad_lines='skip')
+        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=',', on_bad_lines='skip', dtype=str)
     except:
-        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=';', on_bad_lines='skip')
+        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=';', on_bad_lines='skip', dtype=str)
     
-    df.columns = df.columns.str.strip().str.lower().str.replace('"', '').str.replace("'", "")
-    df['uraian'] = df['uraian'].fillna("").astype(str)
-    df['kode'] = df['kode'].fillna("000").astype(str).str.strip()
+    # 2. Jika datanya menyatu di satu kolom, paksa belah dua
+    if len(df.columns) == 1:
+        col_name = df.columns[0]
+        df[['kode', 'uraian']] = df[col_name].str.split(r'[,;]', n=1, expand=True)
+        df = df.drop(columns=[col_name])
+        
+    # 3. PAKSA GANTI NAMA KOLOM (Ini yang akan menghilangkan Error 'uraian')
+    # Tidak peduli apa nama aslinya, kolom ke-1 pasti 'kode', ke-2 pasti 'uraian'
+    if len(df.columns) >= 2:
+        kolom_baru = list(df.columns)
+        kolom_baru[0] = 'kode'
+        kolom_baru[1] = 'uraian'
+        df.columns = kolom_baru
     
-    # Pre-process database (Lakukan sekali saja & simpan di cache)
+    # 4. Bersihkan isi baris dari karakter titik koma (;) di ujung kalimat jika ada terbawa
+    df['uraian'] = df['uraian'].astype(str).str.replace(r';$', '', regex=True).str.strip().fillna("")
+    df['kode'] = df['kode'].astype(str).str.strip().fillna("000")
+    
+    # 5. Lakukan pembersihan NLP
     df['clean_uraian'] = df['uraian'].apply(preprocess_text)
+    
     return df
 
 # --- 2. FITUR HIERARKI ---
