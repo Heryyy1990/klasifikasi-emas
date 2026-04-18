@@ -12,7 +12,6 @@ from thefuzz import fuzz
 # --- KONFIGURASI HALAMAN ---
 st.set_page_config(page_title="SIKAP Dashboard", page_icon="📊", layout="wide")
 
-# Custom CSS
 st.markdown("""
     <style>
     .main { background-color: #f8f9fa; }
@@ -30,22 +29,104 @@ def init_nlp():
 
 stemmer, remover = init_nlp()
 
-# --- KAMUS JARGON BIROKRASI (SUPER LENGKAP) ---
+# --- KAMUS JARGON BIROKRASI (VERSI FULL PERMENDAGRI 83/2022) ---
 kamus_birokrasi = {
-    # MASUKKAN SELURUH ISI KAMUS PANJANG ANDA DI SINI
     "apbd": "anggaran pendapatan dan belanja daerah",
+    "apbn": "anggaran pendapatan dan belanja negara",
     "tapd": "tim anggaran pemerintah daerah",
-    "sppd": "surat perintah perjalanan dinas",
-    "lhe": "laporan hasil evaluasi",
-    "sp2d": "surat perintah pencairan dana",
-    "dak": "dana alokasi khusus",
-    "pns": "pegawai negeri sipil",
-    "asn": "aparatur sipil negara",
     "dpa": "dokumen pelaksanaan anggaran",
+    "rka": "rencana kerja anggaran",
+    "skpd": "satuan kerja perangkat daerah",
+    "ppkd": "pejabat pengelola keuangan daerah",
+    "ppa": "prioritas plafon anggaran",
     "spp": "surat permintaan pembayaran",
     "spm": "surat perintah membayar",
-    "ls": "langsung"
-    # Dst... pastikan isi lengkapnya Anda paste kembali ke sini ya!
+    "sp2d": "surat perintah pencairan dana",
+    "up": "uang persediaan",
+    "gu": "ganti uang",
+    "tu": "tambah uang",
+    "ls": "langsung",
+    "bud": "bendahara umum daerah",
+    "bku": "buku kas umum",
+    "sakd": "sistem akuntansi keuangan daerah",
+    "phln": "pinjaman hibah luar negeri",
+    "bumd": "badan usaha milik daerah",
+    "blud": "badan layanan umum daerah",
+    "dau": "dana alokasi umum",
+    "dak": "dana alokasi khusus",
+    "dbh": "dana bagi hasil",
+    "asn": "aparatur sipil negara",
+    "pns": "pegawai negeri sipil",
+    "cpns": "calon pegawai negeri sipil",
+    "pppk": "pegawai pemerintah dengan perjanjian kerja",
+    "p3k": "pegawai pemerintah dengan perjanjian kerja",
+    "nip": "nomor induk pegawai",
+    "bkn": "badan kepegawaian negara",
+    "skp": "standar kinerja pegawai",
+    "duk": "daftar urut kepangkatan",
+    "karpeg": "kartu pegawai",
+    "kpe": "kartu pegawai elektronik",
+    "karis": "kartu istri",
+    "karsu": "kartu suami",
+    "lp2p": "laporan pajak penghasilan pribadi",
+    "kp4": "keterangan penerimaan pembayaran penghasilan pegawai",
+    "baperjakat": "badan pertimbangan jabatan dan pangkat",
+    "bpjs": "badan penyelenggara jaminan sosial",
+    "diklat": "pendidikan dan pelatihan",
+    "bimtek": "bimbingan teknis",
+    "lhp": "laporan hasil pemeriksaan",
+    "lha": "laporan hasil audit",
+    "lhpo": "laporan hasil pemeriksaan operasional",
+    "lhe": "laporan hasil evaluasi",
+    "lhai": "laporan hasil audit investigasi",
+    "tpk": "tindak pidana korupsi",
+    "gcg": "good corporate governance",
+    "perda": "peraturan daerah",
+    "perbup": "peraturan bupati",
+    "perwali": "peraturan wali kota",
+    "mou": "memorandum of understanding nota kesepakatan",
+    "sop": "standar operasional prosedur",
+    "haki": "hak atas kekayaan intelektual",
+    "dprd": "dewan perwakilan rakyat daerah",
+    "musrenbang": "musyawarah perencanaan pembangunan",
+    "lkpj": "laporan keterangan pertanggungjawaban",
+    "lppd": "laporan penyelenggaraan pemerintahan daerah",
+    "bmd": "barang milik daerah",
+    "kak": "kerangka acuan kerja",
+    "sppd": "surat perintah perjalanan dinas",
+    "spt": "surat perintah tugas",
+    "nodin": "nota dinas",
+    "bap": "berita acara pemeriksaan",
+    "bast": "berita acara serah terima",
+    "kpu": "komisi pemilihan umum",
+    "kpud": "komisi pemilihan umum daerah",
+    "dp4": "daftar penduduk potensial pemilih",
+    "dps": "daftar pemilih sementara",
+    "dpt": "daftar pemilih tetap",
+    "panwasda": "panitia pengawas daerah",
+    "ppk": "panitia pemilihan kecamatan",
+    "pps": "panitia pemungutan suara",
+    "kpps": "kelompok penyelenggara pemungutan suara",
+    "ormas": "organisasi kemasyarakatan",
+    "lsm": "lembaga swadaya masyarakat",
+    "parpol": "partai politik",
+    "anri": "arsip nasional republik indonesia",
+    "jra": "jadwal retensi arsip",
+    "sikn": "sistem informasi kearsipan nasional",
+    "jikn": "jaringan informasi kearsipan nasional",
+    "spam": "sistem penyediaan air minum",
+    "psat": "pangan segar asal tumbuhan",
+    "bumdes": "badan usaha milik desa",
+    "bos": "bantuan operasional sekolah",
+    "paud": "pendidikan anak usia dini",
+    "rtrw": "rencana tata ruang wilayah",
+    "rdtr": "rencana detail tata ruang",
+    "rtbl": "rencana tata bangunan dan lingkungan",
+    "amdal": "analisis mengenai dampak lingkungan",
+    "ukl": "upaya pengelolaan lingkungan",
+    "upl": "upaya pemantauan lingkungan",
+    "b3": "bahan berbahaya dan beracun",
+    "sar": "search and rescue pencarian dan pertolongan"
 }
 
 def terjemahkan_singkatan(text):
@@ -61,17 +142,29 @@ def preprocess_text(text):
     text = stemmer.stem(text)
     return text
 
-# --- MANAJEMEN DATA ---
+# --- MANAJEMEN DATA (JURUS ANTI-BADAI CSV) ---
 @st.cache_data
 def load_data():
     try:
-        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=',', dtype=str)
+        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=',', on_bad_lines='skip', dtype=str)
     except:
-        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=';', dtype=str)
+        df = pd.read_csv('klasifikasi_arsip_emas.csv', sep=';', on_bad_lines='skip', dtype=str)
     
-    df.columns = ['kode', 'uraian'] + list(df.columns[2:])
-    df['uraian'] = df['uraian'].fillna("").astype(str)
+    if len(df.columns) == 1:
+        col_name = df.columns[0]
+        df[['kode', 'uraian']] = df[col_name].str.split(r'[,;]', n=1, expand=True)
+        df = df.drop(columns=[col_name])
+        
+    if len(df.columns) >= 2:
+        kolom_baru = list(df.columns)
+        kolom_baru[0] = 'kode'
+        kolom_baru[1] = 'uraian'
+        df.columns = kolom_baru
+    
+    df['uraian'] = df['uraian'].astype(str).str.replace(r';$', '', regex=True).str.strip().fillna("")
+    df['kode'] = df['kode'].astype(str).str.strip().fillna("000")
     df['clean_uraian'] = df['uraian'].apply(preprocess_text)
+    
     return df
 
 def save_feedback(input_text, final_code):
@@ -88,7 +181,6 @@ def save_feedback(input_text, final_code):
 def smart_classify(user_input, df, top_n=3):
     clean_input = preprocess_text(user_input)
     
-    # N-Gram 1 sampai 3 kata sekaligus
     vectorizer = TfidfVectorizer(ngram_range=(1, 3))
     all_docs = df['clean_uraian'].tolist() + [clean_input]
     tfidf_matrix = vectorizer.fit_transform(all_docs)
@@ -97,7 +189,6 @@ def smart_classify(user_input, df, top_n=3):
     
     final_scores = []
     for idx, score in enumerate(cosine_sim):
-        # Menggunakan token_sort_ratio ketat & Bobot 85% / 15%
         fuzzy_score = fuzz.token_sort_ratio(clean_input, df.iloc[idx]['clean_uraian']) / 100
         combined_score = (score * 0.85) + (fuzzy_score * 0.15)
         final_scores.append((idx, combined_score))
@@ -119,19 +210,18 @@ if menu == "🔍 Pencarian Pintar":
 
     if user_input:
         with st.spinner("Menganalisis makna persuratan..."):
-            # MEMANGGIL OTAK "BEBAS GEMBOK" DI SINI
             results = smart_classify(user_input, df)
             
             st.subheader("Rekomendasi Terbaik:")
             for i, (idx, score) in enumerate(results):
                 res = df.iloc[idx]
                 with st.container():
-                    st.markdown(f"""
+                    st.markdown(f'''
                     <div class="result-card">
                         <h4>🏆 #{i+1} | Kode: {res['kode']} (Skor: {score:.1%})</h4>
                         <p><b>Uraian:</b> {res['uraian']}</p>
                     </div>
-                    """, unsafe_allow_html=True)
+                    ''', unsafe_allow_html=True)
                     
                     if st.button(f"✅ Gunakan Kode {res['kode']}", key=f"btn_{idx}"):
                         save_feedback(user_input, res['kode'])
