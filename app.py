@@ -12,37 +12,28 @@ from thefuzz import process, fuzz
 # --- KONFIGURASI HALAMAN ---
 st.set_page_config(page_title="SIKAP - Klasifikasi Arsip Pintar", page_icon="🗂️", layout="wide")
 
-# --- UI & CSS CUSTOM (Warna Elegan Biru & Hijau) ---
+# --- UI & CSS CUSTOM (SUPPORT DARK MODE & LIGHT MODE) ---
 st.markdown("""
     <style>
-    /* Latar belakang aplikasi dengan gradasi hijau-biru yang sangat lembut */
-    .stApp {
-        background: linear-gradient(135deg, #f1f8f6 0%, #e1f5fe 100%);
-    }
-    /* Konfigurasi Judul Utama */
+    /* Konfigurasi Judul Utama dengan Gradasi yang cocok di layar hitam & putih */
     .sikap-title {
         font-size: 4.5rem; 
         font-weight: 900; 
-        color: #004D40; /* Hijau gelap elegan */
         text-align: center;
         margin-bottom: -15px; 
         letter-spacing: 3px;
+        background: linear-gradient(45deg, #00BFA5, #0288D1);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     .sikap-subtitle {
-        font-size: 1.4rem; 
-        color: #0277BD; /* Biru pemerintahan */
+        font-size: 1.3rem; 
         text-align: center; 
         font-weight: 600;
         margin-bottom: 40px;
         letter-spacing: 1px;
-    }
-    /* Desain Expander (Kotak Rekomendasi) */
-    .streamlit-expanderHeader {
-        background-color: #ffffff;
-        border-radius: 8px;
-        font-weight: bold;
-        color: #004D40;
+        opacity: 0.8; /* Mengikuti warna teks bawaan sistem terang/gelap */
     }
     </style>
 """, unsafe_allow_html=True)
@@ -168,7 +159,7 @@ def terjemahkan_singkatan(text):
     kata_terjemahan = [kamus_birokrasi.get(kata, kata) for kata in kata_kata]
     return " ".join(kata_terjemahan)
 
-# --- FUNGSI PEMBERSIH UTAMA (Digabung agar tidak tumpang tindih) ---
+# --- FUNGSI PEMBERSIH UTAMA ---
 def preprocess_text(text):
     text = str(text).lower()
     text = terjemahkan_singkatan(text)
@@ -201,29 +192,41 @@ def load_data():
     df['clean_uraian'] = df['uraian'].apply(preprocess_text)
     return df
 
-# --- 2. FITUR HIERARKI (DENGAN WARNA BERBEDA TIAP LEVEL) ---
+# --- FUNGSI PEMBUAT DESAIN BADGE (HIERARKI) ---
+def get_badge_html(kode, uraian, level):
+    levels_name = ["Primer", "Sekunder", "Tersier", "Kuartier", "Kuintier"]
+    label = levels_name[level] if level < len(levels_name) else f"Level {level+1}"
+    
+    # Palet warna berdasarkan level hierarki
+    warna_level = ["#B71C1C", "#1565C0", "#2E7D32", "#E65100", "#4A148C"]
+    warna_bg = warna_level[level] if level < len(warna_level) else "#424242"
+    
+    indent = level * 30 # Jarak indentasi agar membentuk pohon
+    simbol = "└─ " if level > 0 else "🗂️ "
+    
+    # Mengembalikan HTML Badge: Warna background hanya menempel pada teks, tulisan dipaksa putih agar selalu terbaca
+    return f"<div style='margin-left: {indent}px; margin-bottom: 8px;'>" \
+           f"<span style='background-color: {warna_bg}; color: #ffffff; padding: 6px 12px; border-radius: 6px; font-weight: normal; font-size: 0.95em; display: inline-block; box-shadow: 0px 2px 4px rgba(0,0,0,0.2);'>" \
+           f"<strong>{simbol}{kode}</strong> &nbsp;|&nbsp; {uraian} <i style='opacity: 0.8;'>({label})</i>" \
+           f"</span></div>"
+
+# --- 2. FITUR HIERARKI (UNTUK TAB PENCARIAN CERDAS) ---
 def get_hierarchy(kode_target, df):
     parts = str(kode_target).split('.')
     hierarchy_list = []
     current_code = ""
-    levels = ["Primer", "Sekunder", "Tersier", "Kuartier", "Kuintier"]
-    
-    # Palet warna berdasarkan level hierarki (Elegan)
-    warna_level = ["#B71C1C", "#1565C0", "#2E7D32", "#E65100", "#4A148C"]
 
     for i, part in enumerate(parts):
         current_code = (current_code + "." + part) if current_code else part
         match = df[df['kode'] == current_code]
         uraian = match.iloc[0]['uraian'].title() if not match.empty else "Detail Klasifikasi"
-        label = levels[i] if i < len(levels) else f"Level {i+1}"
-        warna = warna_level[i] if i < len(warna_level) else "#424242"
         
-        # Menggunakan HTML untuk mewarnai teks
-        html_string = f"<div style='margin-left: {i*20}px; padding: 4px 0;'><span style='color: {warna}; font-weight: bold;'>└─ {current_code}</span> : {uraian} <i style='color: #757575; font-size: 0.9em;'>({label})</i></div>"
+        # Panggil fungsi pembuat Badge
+        html_string = get_badge_html(current_code, uraian, i)
         hierarchy_list.append(html_string)
     return hierarchy_list
 
-# --- 3. LOGIKA NLP & FUZZY MATCHING (TIDAK DIUBAH) ---
+# --- 3. LOGIKA NLP & FUZZY MATCHING ---
 def smart_classify(user_input, df, top_n=3):
     clean_input = preprocess_text(user_input)
     vectorizer = TfidfVectorizer(ngram_range=(1, 2))
@@ -262,16 +265,16 @@ def smart_classify(user_input, df, top_n=3):
 
 # Judul Aplikasi
 st.markdown("<div class='sikap-title'>SIKAP</div>", unsafe_allow_html=True)
-st.markdown("<div class='sikap-subtitle'>SIstem Informasi Klasifikasi Arsip Pintar</div>", unsafe_allow_html=True)
+st.markdown("<div class='sikap-subtitle'>Sistem Informasi Klasifikasi Arsip Pintar</div>", unsafe_allow_html=True)
 
 try:
     df = load_data()
     
-    # Menambahkan Sidebar untuk Riwayat Pencarian
+    # Sidebar untuk Riwayat Pencarian
     with st.sidebar:
         st.header("🕒 Riwayat Pencarian")
         if st.session_state.search_history:
-            for riwayat in reversed(st.session_state.search_history[-10:]): # Tampilkan 10 terakhir
+            for riwayat in reversed(st.session_state.search_history[-10:]):
                 st.caption(f"• {riwayat}")
             if st.button("Hapus Riwayat", use_container_width=True):
                 st.session_state.search_history = []
@@ -288,7 +291,6 @@ try:
         user_input = st.text_input("📝 Perihal Surat / Dokumen:", placeholder="Contoh: permohonan cuti tahunan pegawai atau undangan rapat tapd...", key="input_ai")
 
         if user_input:
-            # Simpan ke riwayat
             if user_input not in st.session_state.search_history:
                 st.session_state.search_history.append(user_input)
 
@@ -297,16 +299,14 @@ try:
                 
                 if results:
                     st.success("Analisis selesai! Berikut adalah rekomendasi kode untuk dokumen Anda:")
-                    
-                    pilihan_feedback = [] # Untuk form feedback
+                    pilihan_feedback = [] 
                     
                     for i, (idx, score) in enumerate(results):
                         res = df.iloc[idx]
                         pilihan_feedback.append(f"{res['kode']} - {res['uraian'].title()}")
                         
-                        # Tampilan Expander yang lebih rapi
                         with st.expander(f"🏅 Rekomendasi #{i+1}: Kode {res['kode']} (Keyakinan: {score:.1%})", expanded=(i==0)):
-                            st.markdown(f"**Uraian:** {res['uraian'].title()}")
+                            st.markdown(f"**Uraian Akhir:** {res['uraian'].title()}")
                             st.markdown("**Struktur Hierarki:**")
                             hierarki = get_hierarchy(res['kode'], df)
                             for h in hierarki:
@@ -314,7 +314,7 @@ try:
                     
                     st.divider()
                     
-                    # --- FITUR FEEDBACK (PEMBELAJARAN) ---
+                    # --- FITUR FEEDBACK ---
                     st.markdown("#### 💡 Bantu SIKAP Menjadi Lebih Pintar")
                     st.write("Dari rekomendasi di atas, mana kode yang paling tepat menurut Anda?")
                     
@@ -323,35 +323,37 @@ try:
                         submit_feedback = st.form_submit_button("Kirim Masukan")
                         
                         if submit_feedback:
-                            # Logika menyimpan feedback (Simulasi penyimpanan data)
                             waktu_sekarang = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                             data_feedback = f"{waktu_sekarang} | Input: {user_input} | Terpilih: {jawaban_benar}\n"
-                            
-                            # Simpan ke file teks lokal (sebagai log untuk dipelajari nanti)
                             with open("feedback_ai_log.txt", "a", encoding="utf-8") as f:
                                 f.write(data_feedback)
-                                
-                            st.success(f"Terima kasih! Pilihan Anda ({jawaban_benar.split(' - ')[0]}) telah disimpan untuk bahan evaluasi AI ke depannya.")
+                            st.success(f"Terima kasih! Pilihan Anda ({jawaban_benar.split(' - ')[0]}) telah disimpan untuk evaluasi AI ke depannya.")
                 else:
                     st.warning("Tidak ditemukan klasifikasi yang cocok. Coba gunakan kata kunci lain.")
 
-    # ================= TAB 2: JELAJAH KODE =================
+    # ================= TAB 2: JELAJAH KODE (DIROMBAK SESUAI HIERARKI WARNA) =================
     with tab_katalog:
-        st.write("Cari kode klasifikasi secara manual berdasarkan awalannya.")
-        prefix_input = st.text_input("🔍 Masukkan Awalan Kode (Misal: 000, 800, 900.1):", placeholder="Ketik kode di sini...")
+        st.write("Cari rumpun kode klasifikasi secara manual berdasarkan awalannya (Pohon Hierarki Otomatis).")
+        prefix_input = st.text_input("🔍 Masukkan Awalan Kode (Misal: 000, 800, 900.1):", placeholder="Ketik awalan kode di sini...")
         
         if prefix_input:
-            # Filter DataFrame berdasarkan string kode yang berawalan dari input user
             hasil_filter = df[df['kode'].str.startswith(prefix_input)]
             
             if not hasil_filter.empty:
                 st.success(f"Ditemukan {len(hasil_filter)} kode yang berawalan '{prefix_input}':")
-                # Tampilkan dalam bentuk tabel yang elegan
-                st.dataframe(
-                    hasil_filter[['kode', 'uraian']].rename(columns={'kode': 'Kode Klasifikasi', 'uraian': 'Uraian'}),
-                    use_container_width=True,
-                    hide_index=True
-                )
+                st.markdown("<br>", unsafe_allow_html=True)
+                
+                # Menampilkan hasil filter bukan menggunakan tabel, melainkan menggunakan Badge Hierarki berwarna
+                for index, row in hasil_filter.iterrows():
+                    kode = str(row['kode'])
+                    uraian = str(row['uraian']).title()
+                    
+                    # Logika pintar: menghitung jumlah titik untuk menentukan dia level berapa (Primer, Sekunder, dll)
+                    level = kode.count('.') 
+                    
+                    # Panggil fungsi pembuat Badge
+                    html_badge = get_badge_html(kode, uraian, level)
+                    st.markdown(html_badge, unsafe_allow_html=True)
             else:
                 st.error(f"Tidak ada kode klasifikasi yang berawalan '{prefix_input}'.")
 
