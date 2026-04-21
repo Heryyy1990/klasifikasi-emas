@@ -271,7 +271,7 @@ def smart_classify(user_input, df, top_n=3):
 # --- 4. ANTARMUKA UTAMA ---
 
 st.markdown("<div class='sikap-title'>SIKAP</div>", unsafe_allow_html=True)
-st.markdown("<div class='sikap-subtitle'>SIstem Informasi Klasifikasi Arsip Pintar</div>", unsafe_allow_html=True)
+st.markdown("<div class='sikap-subtitle'>Sistem Informasi Klasifikasi Arsip Pintar</div>", unsafe_allow_html=True)
 
 try:
     df = load_data()
