@@ -32,7 +32,10 @@ st.markdown("""
         font-weight: 600;
         margin-bottom: 40px;
         letter-spacing: 1px;
-        opacity: 0.8; 
+        /* --- KEJUTAN WARNA: Gradasi Sunset (Oranye ke Pink) --- */
+        background: linear-gradient(45deg, #FF512F, #DD2476);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
     .streamlit-expanderHeader {
         font-weight: bold;
@@ -387,7 +390,6 @@ try:
                         u = node['uraian']
                         children = node['children']
                         
-                        # ---> KUNCI PERBAIKAN: NATURAL SORTING AGAR 10 TIDAK MUNCUL SEBELUM 2 <---
                         children.sort(key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)])
                         
                         titik_count = str(k).count('.')
@@ -411,7 +413,6 @@ try:
                         
                     if p in nodes:
                         full_html = ""
-                        # Sort bagian paling atas (anak dari primer) dengan Natural Sorting juga
                         sorted_children = sorted(nodes[p]['children'], key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)])
                         for child_kode in sorted_children:
                             full_html += render_tree(child_kode)
