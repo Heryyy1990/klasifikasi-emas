@@ -12,10 +12,9 @@ from thefuzz import process, fuzz
 # --- KONFIGURASI HALAMAN ---
 st.set_page_config(page_title="SIKAP - Klasifikasi Arsip Pintar", page_icon="🗂️", layout="wide")
 
-# --- UI & CSS CUSTOM (SUPPORT DARK MODE & LIGHT MODE) ---
+# --- UI & CSS CUSTOM ---
 st.markdown("""
     <style>
-    /* Konfigurasi Judul Utama dengan Gradasi yang cocok di layar hitam & putih */
     .sikap-title {
         font-size: 4.5rem; 
         font-weight: 900; 
@@ -33,16 +32,26 @@ st.markdown("""
         font-weight: 600;
         margin-bottom: 40px;
         letter-spacing: 1px;
-        opacity: 0.8; /* Mengikuti warna teks bawaan sistem terang/gelap */
+        opacity: 0.8; 
+    }
+    .streamlit-expanderHeader {
+        font-weight: bold;
+        color: #0288D1;
+    }
+    /* PEMBUNUH IKON PANAH BIRU BAWAAN BROWSER */
+    details > summary {
+        list-style: none !important;
+        outline: none !important;
+    }
+    details > summary::-webkit-details-marker {
+        display: none !important; 
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- INISIALISASI SESSION STATE UNTUK FITUR BARU ---
+# --- INISIALISASI SESSION STATE ---
 if 'search_history' not in st.session_state:
     st.session_state.search_history = []
-if 'feedback_submitted' not in st.session_state:
-    st.session_state.feedback_submitted = False
 
 # --- INISIALISASI NLP (Sastrawi) ---
 @st.cache_resource
@@ -53,7 +62,7 @@ def init_nlp():
 
 stemmer, remover = init_nlp()
 
-# --- KAMUS JARGON & SINGKATAN BIROKRASI ---
+# --- KAMUS JARGON & SINGKATAN BIROKRASI (ASLI 100%) ---
 kamus_birokrasi = {
     "apbd": "anggaran pendapatan dan belanja daerah",
     "apbn": "anggaran pendapatan dan belanja negara",
@@ -168,7 +177,7 @@ def preprocess_text(text):
     text = stemmer.stem(text)
     return text
 
-# --- 1. MEMUAT DATABASE ---
+# --- 1. MEMUAT DATABASE (ASLI 100%) ---
 @st.cache_data
 def load_data():
     try:
@@ -192,25 +201,22 @@ def load_data():
     df['clean_uraian'] = df['uraian'].apply(preprocess_text)
     return df
 
-# --- FUNGSI PEMBUAT DESAIN BADGE (HIERARKI) ---
+# --- FUNGSI PEMBUAT BADGE UNTUK TAB 1 (ASLI 100%) ---
 def get_badge_html(kode, uraian, level):
     levels_name = ["Primer", "Sekunder", "Tersier", "Kuartier", "Kuintier"]
     label = levels_name[level] if level < len(levels_name) else f"Level {level+1}"
     
-    # Palet warna berdasarkan level hierarki
     warna_level = ["#B71C1C", "#1565C0", "#2E7D32", "#E65100", "#4A148C"]
     warna_bg = warna_level[level] if level < len(warna_level) else "#424242"
     
-    indent = level * 30 # Jarak indentasi agar membentuk pohon
-    simbol = "└─ " if level > 0 else "🗂️ "
+    indent = level * 30 
     
-    # Mengembalikan HTML Badge: Warna background hanya menempel pada teks, tulisan dipaksa putih agar selalu terbaca
     return f"<div style='margin-left: {indent}px; margin-bottom: 8px;'>" \
            f"<span style='background-color: {warna_bg}; color: #ffffff; padding: 6px 12px; border-radius: 6px; font-weight: normal; font-size: 0.95em; display: inline-block; box-shadow: 0px 2px 4px rgba(0,0,0,0.2);'>" \
-           f"<strong>{simbol}{kode}</strong> &nbsp;|&nbsp; {uraian} <i style='opacity: 0.8;'>({label})</i>" \
+           f"<strong>📁 {kode}</strong> &nbsp;|&nbsp; {uraian} <i style='opacity: 0.8;'>({label})</i>" \
            f"</span></div>"
 
-# --- 2. FITUR HIERARKI (UNTUK TAB PENCARIAN CERDAS) ---
+# --- 2. FITUR HIERARKI TAB 1 (ASLI 100%) ---
 def get_hierarchy(kode_target, df):
     parts = str(kode_target).split('.')
     hierarchy_list = []
@@ -220,13 +226,11 @@ def get_hierarchy(kode_target, df):
         current_code = (current_code + "." + part) if current_code else part
         match = df[df['kode'] == current_code]
         uraian = match.iloc[0]['uraian'].title() if not match.empty else "Detail Klasifikasi"
-        
-        # Panggil fungsi pembuat Badge
         html_string = get_badge_html(current_code, uraian, i)
         hierarchy_list.append(html_string)
     return hierarchy_list
 
-# --- 3. LOGIKA NLP & FUZZY MATCHING ---
+# --- 3. LOGIKA NLP TF-IDF & FUZZY MATCHING (ASLI 100%) ---
 def smart_classify(user_input, df, top_n=3):
     clean_input = preprocess_text(user_input)
     vectorizer = TfidfVectorizer(ngram_range=(1, 2))
@@ -263,14 +267,12 @@ def smart_classify(user_input, df, top_n=3):
 
 # --- 4. ANTARMUKA UTAMA ---
 
-# Judul Aplikasi
 st.markdown("<div class='sikap-title'>SIKAP</div>", unsafe_allow_html=True)
-st.markdown("<div class='sikap-subtitle'>Sistem Informasi Klasifikasi Arsip Pintar</div>", unsafe_allow_html=True)
+st.markdown("<div class='sikap-subtitle'>SIstem Informasi Klasifikasi Arsip Pintar</div>", unsafe_allow_html=True)
 
 try:
     df = load_data()
     
-    # Sidebar untuk Riwayat Pencarian
     with st.sidebar:
         st.header("🕒 Riwayat Pencarian")
         if st.session_state.search_history:
@@ -282,7 +284,6 @@ try:
         else:
             st.info("Belum ada pencarian.")
 
-    # Membagi Layout menjadi dua Tab
     tab_ai, tab_katalog = st.tabs(["🤖 Pencarian AI (Cerdas)", "📂 Jelajah Kode Klasifikasi (Manual)"])
 
     # ================= TAB 1: PENCARIAN AI =================
@@ -314,7 +315,6 @@ try:
                     
                     st.divider()
                     
-                    # --- FITUR FEEDBACK ---
                     st.markdown("#### 💡 Bantu SIKAP Menjadi Lebih Pintar")
                     st.write("Dari rekomendasi di atas, mana kode yang paling tepat menurut Anda?")
                     
@@ -327,35 +327,98 @@ try:
                             data_feedback = f"{waktu_sekarang} | Input: {user_input} | Terpilih: {jawaban_benar}\n"
                             with open("feedback_ai_log.txt", "a", encoding="utf-8") as f:
                                 f.write(data_feedback)
-                            st.success(f"Terima kasih! Pilihan Anda ({jawaban_benar.split(' - ')[0]}) telah disimpan untuk evaluasi AI ke depannya.")
+                            st.success(f"Terima kasih! Pilihan Anda telah disimpan untuk evaluasi AI ke depannya.")
                 else:
                     st.warning("Tidak ditemukan klasifikasi yang cocok. Coba gunakan kata kunci lain.")
 
-    # ================= TAB 2: JELAJAH KODE (DIROMBAK SESUAI HIERARKI WARNA) =================
+    # ================= TAB 2: JELAJAH KODE (ROLLBACK DENGAN FIX NATURAL SORTING) =================
     with tab_katalog:
-        st.write("Cari rumpun kode klasifikasi secara manual berdasarkan awalannya (Pohon Hierarki Otomatis).")
-        prefix_input = st.text_input("🔍 Masukkan Awalan Kode (Misal: 000, 800, 900.1):", placeholder="Ketik awalan kode di sini...")
+        st.write("Jelajahi Pohon Hierarki Klasifikasi Arsip (Klik pada Folder Utama untuk membuka isinya):")
         
-        if prefix_input:
-            hasil_filter = df[df['kode'].str.startswith(prefix_input)]
+        daftar_primer = [f"{i}00" for i in range(10)]
+        
+        for p in daftar_primer:
+            cek_df = df[df['kode'] == p]
+            uraian_primer = cek_df.iloc[0]['uraian'].title() if not cek_df.empty else "Detail Klasifikasi"
             
-            if not hasil_filter.empty:
-                st.success(f"Ditemukan {len(hasil_filter)} kode yang berawalan '{prefix_input}':")
-                st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander(f"📁 RUMPUN {p} - {uraian_primer}"):
                 
-                # Menampilkan hasil filter bukan menggunakan tabel, melainkan menggunakan Badge Hierarki berwarna
-                for index, row in hasil_filter.iterrows():
-                    kode = str(row['kode'])
-                    uraian = str(row['uraian']).title()
+                hasil_filter = df[df['kode'].str.startswith(p)]
+                
+                if not hasil_filter.empty:
+                    hasil_filter = hasil_filter[hasil_filter['kode'].str.match(r'^\d')]
                     
-                    # Logika pintar: menghitung jumlah titik untuk menentukan dia level berapa (Primer, Sekunder, dll)
-                    level = kode.count('.') 
+                    nodes = {}
+                    for _, row in hasil_filter.iterrows():
+                        k = str(row['kode']).strip()
+                        u = str(row['uraian']).title()
+                        nodes[k] = {'uraian': u, 'children': []}
+                        
+                    for k in nodes:
+                        if k == p: continue 
+                        curr = k
+                        parent = None
+                        while True:
+                            if '.' in curr:
+                                curr = curr.rsplit('.', 1)[0]
+                            else:
+                                if len(curr) == 3 and curr.endswith('00'):
+                                    parent = curr
+                                    break
+                                elif len(curr) > 3:
+                                    curr = curr[:-1]
+                                elif len(curr) == 3:
+                                    if curr.endswith('0'): curr = curr[0] + '00'
+                                    else: curr = curr[0:2] + '0'
+                                else:
+                                    break
+                            if curr in nodes:
+                                parent = curr
+                                break
+                        
+                        if not parent or parent not in nodes:
+                            parent = p
+                        
+                        if parent in nodes and parent != k:
+                            nodes[parent]['children'].append(k)
+                            
+                    def render_tree(k):
+                        node = nodes[k]
+                        u = node['uraian']
+                        children = node['children']
+                        
+                        # ---> KUNCI PERBAIKAN: NATURAL SORTING AGAR 10 TIDAK MUNCUL SEBELUM 2 <---
+                        children.sort(key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)])
+                        
+                        titik_count = str(k).count('.')
+                        actual_level = titik_count if titik_count < 4 else 3
+                        
+                        warna_level = ["#B71C1C", "#1565C0", "#2E7D32", "#E65100"]
+                        warna_bg = warna_level[actual_level]
+                        
+                        levels_name = ["Primer", "Sekunder", "Tersier", "Kuartier"]
+                        label = levels_name[actual_level]
+                        
+                        html = ""
+                        if children:
+                            html += f'<details style="margin-bottom: 8px;"><summary style="cursor: pointer; list-style: none; outline: none;"><span style="background-color: {warna_bg}; color: #ffffff; padding: 6px 12px; border-radius: 6px; font-weight: normal; font-size: 0.95em; display: inline-block; box-shadow: 0px 2px 4px rgba(0,0,0,0.2);"><strong>📁 {k}</strong> &nbsp;|&nbsp; {u} <i style="opacity: 0.8;">({label})</i></span></summary><div style="margin-left: 20px; padding-left: 10px; border-left: 2px dashed #ccc; padding-top: 8px;">'
+                            for c in children:
+                                html += render_tree(c)
+                            html += '</div></details>'
+                        else:
+                            html += f'<div style="margin-bottom: 8px;"><span style="background-color: {warna_bg}; color: #ffffff; padding: 6px 12px; border-radius: 6px; font-weight: normal; font-size: 0.95em; display: inline-block; box-shadow: 0px 2px 4px rgba(0,0,0,0.2);"><strong>📁 {k}</strong> &nbsp;|&nbsp; {u} <i style="opacity: 0.8;">({label})</i></span></div>'
+                        return html
+                        
+                    if p in nodes:
+                        full_html = ""
+                        # Sort bagian paling atas (anak dari primer) dengan Natural Sorting juga
+                        sorted_children = sorted(nodes[p]['children'], key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)])
+                        for child_kode in sorted_children:
+                            full_html += render_tree(child_kode)
+                        st.markdown(full_html, unsafe_allow_html=True)
                     
-                    # Panggil fungsi pembuat Badge
-                    html_badge = get_badge_html(kode, uraian, level)
-                    st.markdown(html_badge, unsafe_allow_html=True)
-            else:
-                st.error(f"Tidak ada kode klasifikasi yang berawalan '{prefix_input}'.")
+                else:
+                    st.caption("Tidak ada data klasifikasi di dalam rumpun ini.")
 
 except Exception as e:
     st.error(f"Terjadi kesalahan saat memuat data: {e}")
